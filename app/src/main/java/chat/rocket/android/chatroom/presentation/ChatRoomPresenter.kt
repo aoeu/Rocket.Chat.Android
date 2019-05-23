@@ -371,8 +371,9 @@ class ChatRoomPresenter @Inject constructor(
                         messagesRepository.save(newMessage.copy(synced = true))
                         logMessageSent()
                     } catch (ex: java.lang.IllegalStateException) {
-                        Timber.d(ex, "Probably a read-only problem...")
-                        view.showGenericErrorMessage() // TODO - remove when we implement :userId:/message subscription
+                        // TODO: Remove this catch block when :userId:/message subscription is implemented.
+                        Timber.d(ex, "possibly caused by sending a message to a read-only channel")
+                        view.showGenericErrorMessage()
                     }
                     lastMessageId = id
                 } else {
