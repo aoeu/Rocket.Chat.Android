@@ -357,36 +357,8 @@ class ChatRoomPresenter @Inject constructor(
                 // ignore message for now, will receive it on the stream
                 if (messageId == null) {
                     val id = UUID.randomUUID().toString()
-                    val username = userHelper.username()
-                    val user = userHelper.user()
-                    val newMessage = Message(
-                        id = id,
-                        roomId = chatRoomId,
-                        message = text,
-                        timestamp = Instant.now().toEpochMilli(),
-                        sender = SimpleUser(user?.id, user?.username ?: username, user?.name),
-                        attachments = null,
-                        avatar = currentServer.avatarUrl(
-                            username!!,
-                            token?.userId,
-                            token?.authToken
-                        ),
-                        channels = null,
-                        editedAt = null,
-                        editedBy = null,
-                        groupable = false,
-                        parseUrls = false,
-                        pinned = false,
-                        starred = emptyList(),
-                        mentions = emptyList(),
-                        reactions = null,
-                        senderAlias = null,
-                        type = null,
-                        updatedAt = null,
-                        urls = null,
-                        synced = false,
-                        unread = true
-                    )
+                    val newMessage = createMessage(chatRoomId, text, id)
+
                     try {
                         messagesRepository.save(newMessage)
                         view.showNewMessage(
@@ -424,6 +396,39 @@ class ChatRoomPresenter @Inject constructor(
                 view.enableSendMessageButton()
             }
         }
+    }
+
+    fun createMessage(chatRoomId: String, text: String, id: String):Message {
+        val username = userHelper.username()
+        val user = userHelper.user()
+        return Message(
+                id = id,
+                roomId = chatRoomId,
+                message = text,
+                timestamp = Instant.now().toEpochMilli(),
+                sender = SimpleUser(user?.id, user?.username ?: username, user?.name),
+                attachments = null,
+                avatar = currentServer.avatarUrl(
+                        username!!,
+                        token?.userId,
+                        token?.authToken
+                ),
+                channels = null,
+                editedAt = null,
+                editedBy = null,
+                groupable = false,
+                parseUrls = false,
+                pinned = false,
+                starred = emptyList(),
+                mentions = emptyList(),
+                reactions = null,
+                senderAlias = null,
+                type = null,
+                updatedAt = null,
+                urls = null,
+                synced = false,
+                unread = true
+        )
     }
 
     fun reportMessage(messageId: String, description: String) {
