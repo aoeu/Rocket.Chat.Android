@@ -362,26 +362,17 @@ class ChatRoomPresenter @Inject constructor(
                     try {
                         messagesRepository.save(newMessage)
                         view.showNewMessage(
-                            mapper.map(
-                                newMessage,
-                                RoomUiModel(roles = chatRoles, isBroadcast = isBroadcast)
-                            ), false
+                                mapper.map(
+                                        newMessage,
+                                        RoomUiModel(roles = chatRoles, isBroadcast = isBroadcast)
+                                ), false
                         )
                         client.sendMessage(id, chatRoomId, text)
                         messagesRepository.save(newMessage.copy(synced = true))
                         logMessageSent()
-                    } catch (ex: Exception) {
-                        // Ok, not very beautiful, but the backend sends us a not valid response
-                        // When someone sends a message on a read-only channel, so we just ignore it
-                        // and show a generic error message
-                        // TODO - remove the generic message when we implement :userId:/message subscription
-                        if (ex is IllegalStateException) {
-                            Timber.d(ex, "Probably a read-only problem...")
-                            view.showGenericErrorMessage()
-                        } else {
-                            // some other error, just rethrow it...
-                            throw ex
-                        }
+                    } catch (ex: java.lang.IllegalStateException) {
+                        Timber.d(ex, "Probably a read-only problem...")
+                        view.showGenericErrorMessage() // TODO - remove when we implement :userId:/message subscription
                     }
                     lastMessageId = id
                 } else {
