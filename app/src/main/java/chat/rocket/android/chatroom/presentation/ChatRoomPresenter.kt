@@ -354,27 +354,30 @@ class ChatRoomPresenter @Inject constructor(
         launchUI(strategy) {
             try {
                 view.disableSendMessageButton()
-                // ignore message for now, will receive it on the stream
-                if (messageId == null) {
-                    val id = UUID.randomUUID().toString()
-                    val msg = createMessage(chatRoomId, text, id)
 
-                    try {
-                        messagesRepository.save(msg)
-                        val ui = RoomUiModel(roles = chatRoles, isBroadcast = isBroadcast)
-                        view.showNewMessage(mapper.map(msg, ui), false)
-                        client.sendMessage(id, chatRoomId, text)
-                        messagesRepository.save(msg.copy(synced = true))
-                        logMessageSent()
-                    } catch (ex: java.lang.IllegalStateException) {
-                        // TODO: Remove this catch block when :userId:/message subscription is implemented.
-                        Timber.d(ex, "possibly caused by sending a message to a read-only channel")
-                        view.showGenericErrorMessage()
-                    }
-                    lastMessageId = id
-                } else {
+                if (messageId != null) {
                     client.updateMessage(chatRoomId, messageId, text)
+                    clearDraftMessage()
+                    return@launchUI
                 }
+
+                // ignore message for now, will receive it on the stream
+                val id = UUID.randomUUID().toString()
+                val msg = createMessage(chatRoomId, text, id)
+
+                try {
+                    messagesRepository.save(msg)
+                    val ui = RoomUiModel(roles = chatRoles, isBroadcast = isBroadcast)
+                    view.showNewMessage(mapper.map(msg, ui), false)
+                    client.sendMessage(id, chatRoomId, text)
+                    messagesRepository.save(msg.copy(synced = true))
+                    logMessageSent()
+                } catch (ex: java.lang.IllegalStateException) {
+                    // TODO: Remove this catch block when :userId:/message subscription is implemented.
+                    Timber.d(ex, "possibly caused by sending a message to a read-only channel")
+                    view.showGenericErrorMessage()
+                }
+                lastMessageId = id
                 clearDraftMessage()
             } catch (ex: Exception) {
                 Timber.e(ex, "Error sending message...")
