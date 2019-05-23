@@ -361,7 +361,8 @@ class ChatRoomPresenter @Inject constructor(
 
                     try {
                         messagesRepository.save(msg)
-                        view.showNewMessage(mapper.map(msg, RoomUiModel(chatRoles, isBroadcast)), false)
+                        val ui = RoomUiModel(roles = chatRoles, isBroadcast = isBroadcast)
+                        view.showNewMessage(mapper.map(msg, ui), false)
                         client.sendMessage(id, chatRoomId, text)
                         messagesRepository.save(msg.copy(synced = true))
                         logMessageSent()
