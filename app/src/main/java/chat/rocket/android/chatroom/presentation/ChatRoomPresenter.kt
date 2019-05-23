@@ -354,67 +354,30 @@ class ChatRoomPresenter @Inject constructor(
         launchUI(strategy) {
             try {
                 view.disableSendMessageButton()
-                // ignore message for now, will receive it on the stream
-                if (messageId == null) {
-                    val id = UUID.randomUUID().toString()
-                    val username = userHelper.username()
-                    val user = userHelper.user()
-                    val newMessage = Message(
-                        id = id,
-                        roomId = chatRoomId,
-                        message = text,
-                        timestamp = Instant.now().toEpochMilli(),
-                        sender = SimpleUser(user?.id, user?.username ?: username, user?.name),
-                        attachments = null,
-                        avatar = currentServer.avatarUrl(
-                            username!!,
-                            token?.userId,
-                            token?.authToken
-                        ),
-                        channels = null,
-                        editedAt = null,
-                        editedBy = null,
-                        groupable = false,
-                        parseUrls = false,
-                        pinned = false,
-                        starred = emptyList(),
-                        mentions = emptyList(),
-                        reactions = null,
-                        senderAlias = null,
-                        type = null,
-                        updatedAt = null,
-                        urls = null,
-                        synced = false,
-                        unread = true
-                    )
-                    try {
-                        messagesRepository.save(newMessage)
-                        view.showNewMessage(
-                            mapper.map(
-                                newMessage,
-                                RoomUiModel(roles = chatRoles, isBroadcast = isBroadcast)
-                            ), false
-                        )
-                        client.sendMessage(id, chatRoomId, text)
-                        messagesRepository.save(newMessage.copy(synced = true))
-                        logMessageSent()
-                    } catch (ex: Exception) {
-                        // Ok, not very beautiful, but the backend sends us a not valid response
-                        // When someone sends a message on a read-only channel, so we just ignore it
-                        // and show a generic error message
-                        // TODO - remove the generic message when we implement :userId:/message subscription
-                        if (ex is IllegalStateException) {
-                            Timber.d(ex, "Probably a read-only problem...")
-                            view.showGenericErrorMessage()
-                        } else {
-                            // some other error, just rethrow it...
-                            throw ex
-                        }
-                    }
-                    lastMessageId = id
-                } else {
+
+                if (messageId != null) {
                     client.updateMessage(chatRoomId, messageId, text)
+                    clearDraftMessage()
+                    return@launchUI
                 }
+
+                // ignore message for now, will receive it on the stream
+                val id = UUID.randomUUID().toString()
+                val msg = createMessage(chatRoomId, text, id)
+
+                try {
+                    messagesRepository.save(msg)
+                    val ui = RoomUiModel(roles = chatRoles, isBroadcast = isBroadcast)
+                    view.showNewMessage(mapper.map(msg, ui), false)
+                    client.sendMessage(id, chatRoomId, text)
+                    messagesRepository.save(msg.copy(synced = true))
+                    logMessageSent()
+                } catch (ex: java.lang.IllegalStateException) {
+                    // TODO: Remove this catch block when :userId:/message subscription is implemented.
+                    Timber.d(ex, "possibly caused by sending a message to a read-only channel")
+                    view.showGenericErrorMessage()
+                }
+                lastMessageId = id
                 clearDraftMessage()
             } catch (ex: Exception) {
                 Timber.e(ex, "Error sending message...")
@@ -424,6 +387,39 @@ class ChatRoomPresenter @Inject constructor(
                 view.enableSendMessageButton()
             }
         }
+    }
+
+    fun createMessage(chatRoomId: String, text: String, id: String):Message {
+        val username = userHelper.username()
+        val user = userHelper.user()
+        return Message(
+                id = id,
+                roomId = chatRoomId,
+                message = text,
+                timestamp = Instant.now().toEpochMilli(),
+                sender = SimpleUser(user?.id, user?.username ?: username, user?.name),
+                attachments = null,
+                avatar = currentServer.avatarUrl(
+                        username!!,
+                        token?.userId,
+                        token?.authToken
+                ),
+                channels = null,
+                editedAt = null,
+                editedBy = null,
+                groupable = false,
+                parseUrls = false,
+                pinned = false,
+                starred = emptyList(),
+                mentions = emptyList(),
+                reactions = null,
+                senderAlias = null,
+                type = null,
+                updatedAt = null,
+                urls = null,
+                synced = false,
+                unread = true
+        )
     }
 
     fun reportMessage(messageId: String, description: String) {
