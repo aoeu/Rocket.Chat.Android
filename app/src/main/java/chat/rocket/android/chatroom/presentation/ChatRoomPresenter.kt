@@ -357,18 +357,13 @@ class ChatRoomPresenter @Inject constructor(
                 // ignore message for now, will receive it on the stream
                 if (messageId == null) {
                     val id = UUID.randomUUID().toString()
-                    val newMessage = createMessage(chatRoomId, text, id)
+                    val msg = createMessage(chatRoomId, text, id)
 
                     try {
-                        messagesRepository.save(newMessage)
-                        view.showNewMessage(
-                                mapper.map(
-                                        newMessage,
-                                        RoomUiModel(roles = chatRoles, isBroadcast = isBroadcast)
-                                ), false
-                        )
+                        messagesRepository.save(msg)
+                        view.showNewMessage(mapper.map(msg, RoomUiModel(chatRoles, isBroadcast)), false)
                         client.sendMessage(id, chatRoomId, text)
-                        messagesRepository.save(newMessage.copy(synced = true))
+                        messagesRepository.save(msg.copy(synced = true))
                         logMessageSent()
                     } catch (ex: java.lang.IllegalStateException) {
                         // TODO: Remove this catch block when :userId:/message subscription is implemented.
